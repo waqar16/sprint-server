@@ -1,0 +1,8 @@
+django
+python-dotenv
+pysqlite3-binary
+djangorestframework
+openai
+django-cors-headers
+Pillow
+langchain-openai
