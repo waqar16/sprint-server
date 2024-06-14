@@ -11,8 +11,10 @@ class ImageInformation(BaseModel):
     category: str = Field(description="the category of the picture belongs to")
     context: str = Field(description="The purpose of the picture")
     content_specifics: str = Field(description="Content of the image related")
-    cultural_and_seasonal: str = Field(description="the cultural and seasonal of the picture")
-    technical_aspects: str = Field(description="Technology and the technical aspects of the picture")
+    cultural_and_seasonal: str = Field(
+        description="the cultural and seasonal of the picture")
+    technical_aspects: str = Field(
+        description="Technology and the technical aspects of the picture")
 
 
 parser = JsonOutputParser(pydantic_object=ImageInformation)
@@ -21,23 +23,54 @@ parser = JsonOutputParser(pydantic_object=ImageInformation)
 def process_image_data(image_base64: str):
     vision_prompt = """
     Given the image, provide the following information:
-    - The design style is hand drawn and visual style is filled and complexity is detailed.
-    - A picture belongs to which category or theme, for example image related to Eid day, Christmas, Independence Day.
-    - Purpose of the picture for example is decorative, intended for use in holiday greeting cards.
-    - Content of the picture for example the image contains a detailed, hand-drawn picture.
-    - The cultural and seasonal of the picture.
-    - A picture related to which technology aspects.
+    
+    Identify and List Image Attributes
+
+Please review the uploaded image and identify any attributes from the list below that are present. Extract and list these attributes accordingly:
+
+Style
+
+Design Style: e.g., Flat, Handdrawn
+Visual Style: e.g., Outline, Filled
+Complexity: e.g., Simple, Detailed
+Category/Theme
+
+General Theme: e.g., Business, Technology
+Specific Theme: e.g., Holidays, Sports
+Industry: e.g., Healthcare, Education
+Context/Usage
+
+Usage Context: e.g., Web, Mobile
+Audience: e.g., Kids, Adults
+Purpose: e.g., Decorative, Informative
+Content Specifics
+
+Objects: e.g., Animals, Food
+Activities: e.g., Cooking, Sports
+Concepts: e.g., Abstract, Love & Romance
+Cultural and Seasonal
+
+Cultural Events: e.g., Chinese New Year, Ramadan
+Seasons: e.g., Summer, Winter
+Holidays: e.g., Christmas, Easter
+Technical Aspects
+
+Technology: e.g., AI, Mobile Devices
+Health & Fitness: e.g., Yoga, Gym
     """
 
-    @chain                                                  # chain decorator to make it runnable
+    # chain decorator to make it runnable
+    @chain
     def image_model(inputs: dict):
-        model = ChatOpenAI(temperature=0.5, model="gpt-4-vision-preview", max_tokens=1024)
+        model = ChatOpenAI(
+            temperature=0.5, model="gpt-4-vision-preview", max_tokens=1024)
         msg = model.invoke(
             [HumanMessage(
                 content=[
                     {"type": "text", "text": inputs["prompt"]},
                     {"type": "text", "text": parser.get_format_instructions()},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{inputs['image']}"}},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{inputs['image']}"}},
                 ])]
         )
         return msg.content
