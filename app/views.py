@@ -37,9 +37,10 @@ class ImageProcessView(APIView):
         content_specifics = result.get("content_specifics", "")
         technical_aspects = result.get("technical_aspects", "")
 
-        # query = f"{style} {category} {context} {content_specifics} {technical_aspects}"
+        f_query = f"{style} {category} {context} {content_specifics} {technical_aspects}"
         query = f"{style}"
 
+        # Iconfinder API request
         url = f"https://api.iconfinder.com/v4/icons/search?query={query}&count=10"
         headers = {
             "accept": "application/json",
@@ -49,8 +50,18 @@ class ImageProcessView(APIView):
         response = requests.get(url, headers=headers)
         json_data = response.json()
 
+        # Freepik API request
+        f_url = "https://api.freepik.com/v1/icons"
+        querystring = {"term": f_query, "thumbnail_size": "24", "per_page": "10",
+                       "page": "1", }
+        f_headers = {
+            "x-freepik-api-key": "FPSX19dd1bf8e6534123a705ed38678cb8d1"}
+
+        f_response = requests.get(f_url, headers=f_headers, params=querystring)
+        f_json_data = f_response.json()
+
         icon_data_list = []
-        for icon in json_data['icons']:
+        for icon in json_data.get('icons', []):
             if not icon['is_premium']:
                 for raster_size in icon['raster_sizes']:
                     if raster_size['size'] == 20:  # Check if the size is 20
@@ -61,6 +72,15 @@ class ImageProcessView(APIView):
                             }
                             icon_data_list.append(icon_data)
 
+        # Extract Freepik icon data
+        f_icons_list = []
+        for icon in f_json_data.get('data', []):
+            if icon.get('thumbnails'):
+                f_icons_list.append({
+                    'id': icon.get('id'),
+                    'url': icon['thumbnails'][0].get('url')
+                })
+
         response_data = {
             'attributes': {
                 'style': style,
@@ -69,7 +89,8 @@ class ImageProcessView(APIView):
                 'content_specifics': content_specifics,
                 'technical_aspects': technical_aspects
             },
-            'icons': icon_data_list
+            'icons': icon_data_list,
+            'f_icons': f_icons_list
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -94,4 +115,33 @@ class ImageDownloadView(APIView):
         response = HttpResponse(
             image_content, content_type='application/octet-stream')
         response['Content-Disposition'] = 'attachment; filename=image.png'
+        return response
+
+
+class DownloadFreePikView(APIView):
+
+    def get(self, request, *args, **kwargs):
+        icon_id = request.GET.get('id')
+        if not icon_id:
+            return Response({"error": "No icon ID provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        url = f"https://api.freepik.com/v1/icons/{icon_id}/download"
+        headers = {"x-freepik-api-key": "FPSX19dd1bf8e6534123a705ed38678cb8d1"}
+
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            return Response({"error": "Failed to download icon"}, status=response.status_code)
+
+        data = response.json()
+        download_url = data["data"]["url"]
+
+        # Download the actual image
+        image_response = requests.get(download_url)
+        if image_response.status_code != 200:
+            return Response({"error": "Failed to download image from FreePik"}, status=image_response.status_code)
+
+        image_content = image_response.content
+        response = HttpResponse(
+            image_content, content_type='application/octet-stream')
+        response['Content-Disposition'] = f'attachment; filename={data["data"]["filename"]}.png'
         return response
