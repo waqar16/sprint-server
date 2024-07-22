@@ -230,7 +230,7 @@ class FigmaLinkProcessAPI(APIView):
                 'technical_aspects': technical_aspects
             },
             'f_icons': f_icons_list,
-            'screen_link': FIGMA_API_URL,
+            'screen_link': image_url,
             'figma_link': feedback,
         }
 
